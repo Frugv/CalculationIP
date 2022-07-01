@@ -4,6 +4,7 @@ from Conf import Config
 import MySQLdb
 from mysql.connector import connect
 
+# Create database and table
 with connect(host="localhost", user="root", password="q1w2a3s4", ) as connection:
     db = """CREATE DATABASE IF NOT EXISTS calculateip;"""
     with connection.cursor() as cursor:
@@ -37,6 +38,7 @@ app.config.from_object(Config)
 
 @app.route('/', methods=['GET'])
 def form():
+    # Input form
     form = LoginForm()
     if request.method == 'GET':
         return render_template('html/LoginForm.html', title='Входные данные', form=form)
@@ -44,8 +46,10 @@ def form():
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     if request.method == 'GET':
+        # Connect with the database
         db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
         cursor = db.cursor()
+        # Fetching data from the database
         cursor.execute("SELECT Значение_переменной FROM переменные ORDER BY id_переменные DESC LIMIT 4")
         value = []
         for i in cursor.fetchall():
@@ -55,9 +59,11 @@ def login():
         return render_template('html/TableReturn.html', S=value[0], U=value[3], W=value[2], A=value[1])
     if request.method == 'POST':
         if request.form['Кнопка'] == "Далее":
+            # Check the length of the TIN
             if len(request.form['ИНН организации']) >= 10 and len(request.form['ИНН организации']) <= 12:
                 db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
                 cursor = db.cursor()
+                # Insert data in the database
                 cursor.execute(''' INSERT INTO фио (Имя, Фамилия) VALUES(%s,%s)''',
                                (request.form['Имя'], request.form['Фамилия']))
                 cursor.execute(''' INSERT INTO организация (Название_организации, ИНН_организации) VALUES(%s,%s)''',
@@ -75,8 +81,10 @@ def login():
 @app.route('/calculating', methods=['POST'])
 def calculating():
     if request.method == 'POST':
+        # Connect with the database
         db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
         cursor = db.cursor()
+        # Insert data in the database
         cursor.executemany('''INSERT INTO переменные (Наименование_переменной, Условное_обозначение_переменной, Описание_переменной, Значение_переменной)
             VALUES
             (%s, %s, %s, %s)''',
@@ -90,8 +98,10 @@ def calculating():
 
 @app.route('/result', methods=['GET', 'POST'])
 def result():
+    # Connect with the database
     db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
     cursor = db.cursor()
+    # Fetching data from the database
     cursor.execute("SELECT Значение_переменной FROM переменные ORDER BY id_переменные DESC LIMIT 4")
     value = []
     for i in cursor.fetchall():
@@ -105,8 +115,10 @@ def result():
 
 @app.route('/resulting', methods=['POST'])
 def resulting():
+    # Connect with the database
     db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
     cursor = db.cursor()
+    # Fetching data from the database
     cursor.execute("SELECT Значение_переменной FROM переменные ORDER BY id_переменные DESC LIMIT 4")
     value = []
     for i in cursor.fetchall():
@@ -117,6 +129,7 @@ def resulting():
     if request.method == "POST":
         for i in request.form.getlist('Количество УПС на перегоне'):
             PU.append(int(i))
+        #Data validation
         if sum(PU) != value[3]:
             message = "Количество УПС на всех перегонах должно быть равно количеству УПС на участке! Проверьте введенные данные."
             return render_template('html/InputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], message=message, P=value[0]-1)
@@ -141,7 +154,7 @@ def resulting():
         I = value[3] * (14 + value[2]) + 2 * value[0] + ((value[0] - 1) * 2) + sum(C) + value[1] * 16 + 16
         cursor.close()
         Ci = [i[0] for i in enumerate(C)]
-        print(Ci)
+        # Connect with the database
         db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
         cursor = db.cursor()
         i = 1
