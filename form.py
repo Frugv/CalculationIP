@@ -8,5 +8,3 @@ class LoginForm(FlaskForm):
     organisation = StringField('Название организации:', validators=[DataRequired()])
     inn = IntegerField('ИНН организации:', validators=[DataRequired()])
     submit = SubmitField('Далее')
-
-
