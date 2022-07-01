@@ -1,14 +1,14 @@
 from flask import Flask, render_template, request, redirect
-from form import LoginForm
-from config import Config
+from LoginForm import LoginForm
+from Conf import Config
 import MySQLdb
 from mysql.connector import connect
 
-with connect(host="localhost", user="root", password="root-", ) as connection:
-    app = """CREATE DATABASE IF NOT EXISTS app;"""
+with connect(host="localhost", user="root", password="q1w2a3s4", ) as connection:
+    db = """CREATE DATABASE IF NOT EXISTS calculateip;"""
     with connection.cursor() as cursor:
-        cursor.execute(app)
-db = MySQLdb.connect(host="localhost", user="root", passwd="root-", db="app")
+        cursor.execute(db)
+db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
 cursor = db.cursor()
 cursor.execute("""CREATE TABLE IF NOT EXISTS фио (
     id_фио INT AUTO_INCREMENT PRIMARY KEY,
@@ -24,6 +24,10 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS переменные(
     Условное_обозначение_переменной VARCHAR(100),
     Описание_переменной VARCHAR(100),
     Значение_переменной INT);""")
+cursor.execute("""CREATE TABLE IF NOT EXISTS упс(
+    id_ups INT AUTO_INCREMENT PRIMARY KEY,
+    Количество_УПС INT,
+    Номер_станции INT);""")
 db.commit()
 cursor.close()
 
@@ -31,35 +35,47 @@ app = Flask(__name__)
 
 app.config.from_object(Config)
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
 def form():
     form = LoginForm()
     if request.method == 'GET':
-        return render_template('html/loginform.html', title='Входные данные', form=form)
-    if request.method == 'POST':
-        if request.form['Кнопка'] == 'Назад':
-            return render_template('html/loginform.html', title='Входные данные', form=form)
+        return render_template('html/LoginForm.html', title='Входные данные', form=form)
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST', 'GET'])
 def login():
+    if request.method == 'GET':
+        db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
+        cursor = db.cursor()
+        cursor.execute("SELECT Значение_переменной FROM переменные ORDER BY id_переменные DESC LIMIT 4")
+        value = []
+        for i in cursor.fetchall():
+            value.append(i[0])
+        db.commit()
+        cursor.close()
+        return render_template('html/TableReturn.html', S=value[0], U=value[3], W=value[2], A=value[1])
     if request.method == 'POST':
         if request.form['Кнопка'] == "Далее":
-            db = MySQLdb.connect(host="localhost", user="root", passwd="root-", db="app")
-            cursor = db.cursor()
-            cursor.execute(''' INSERT INTO фио (Имя, Фамилия) VALUES(%s,%s)''',
-                           (request.form['Имя'], request.form['Фамилия']))
-            cursor.execute(''' INSERT INTO организация (Название_организации, ИНН_организации) VALUES(%s,%s)''',
-                           (request.form['Название организации'], request.form['ИНН организации']))
-            db.commit()
-            cursor.close()
-            return render_template('html/tablepermanent.html')
-        if request.form['Кнопка'] == "Назад":
-            return render_template('html/tablepermanent.html')
+            if len(request.form['ИНН организации']) >= 10 and len(request.form['ИНН организации']) <= 12:
+                db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
+                cursor = db.cursor()
+                cursor.execute(''' INSERT INTO фио (Имя, Фамилия) VALUES(%s,%s)''',
+                               (request.form['Имя'], request.form['Фамилия']))
+                cursor.execute(''' INSERT INTO организация (Название_организации, ИНН_организации) VALUES(%s,%s)''',
+                               (request.form['Название организации'], request.form['ИНН организации']))
+                db.commit()
+                cursor.close()
+                return render_template('html/TableInput.html')
+            else:
+                form = LoginForm()
+                message = "Вы ввели неверный ИНН, проверьте и введите снова."
+                return render_template('html/LoginForm.html', title='Входные данные', form=form, message=message)
+    if request.form['Кнопка'] == 'Назад':
+        return render_template('html/TableInput.html')
 
 @app.route('/calculating', methods=['POST'])
 def calculating():
     if request.method == 'POST':
-        db = MySQLdb.connect(host="localhost", user="root", passwd="root-", db="app")
+        db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
         cursor = db.cursor()
         cursor.executemany('''INSERT INTO переменные (Наименование_переменной, Условное_обозначение_переменной, Описание_переменной, Значение_переменной)
             VALUES
@@ -74,23 +90,22 @@ def calculating():
 
 @app.route('/result', methods=['GET', 'POST'])
 def result():
-    db = MySQLdb.connect(host="localhost", user="root", passwd="root-", db="app")
+    db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
     cursor = db.cursor()
     cursor.execute("SELECT Значение_переменной FROM переменные ORDER BY id_переменные DESC LIMIT 4")
     value = []
     for i in cursor.fetchall():
         value.append(i[0])
-    db.commit()
     cursor.close()
     if request.method == 'GET':
-        return render_template('html/inputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], P=value[0]-1)
+        return render_template('html/InputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], P=value[0]-1)
     if request.method == 'POST':
-        return render_template('html/inputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], P=value[0] - 1)
+        return render_template('html/InputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], P=value[0] - 1)
 
 
 @app.route('/resulting', methods=['POST'])
 def resulting():
-    db = MySQLdb.connect(host="localhost", user="root", passwd="root-", db="app")
+    db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
     cursor = db.cursor()
     cursor.execute("SELECT Значение_переменной FROM переменные ORDER BY id_переменные DESC LIMIT 4")
     value = []
@@ -102,12 +117,9 @@ def resulting():
     if request.method == "POST":
         for i in request.form.getlist('Количество УПС на перегоне'):
             PU.append(int(i))
-        if sum(PU) > value[3]:
-            message = "Сумма УПС на перегоне больше, чем количество УПС на участке! Проверьте еще раз данные."
-            return render_template('html/inputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], message=message, P=value[0]-1)
-        elif sum(PU) < value[3]:
-            message = "Сумма УПС на перегоне меньше, чем количество УПС на участке! Проверьте еще раз данные."
-            return render_template('html/inputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], message=message, P=value[0]-1)
+        if sum(PU) != value[3]:
+            message = "Количество УПС на всех перегонах должно быть равно количеству УПС на участке! Проверьте введенные данные."
+            return render_template('html/InputUPS.html', S=value[0], U=value[3], W=value[2], A=value[1], message=message, P=value[0]-1)
         else:
             i = 1
             SU.append(PU[0])
@@ -129,8 +141,17 @@ def resulting():
         I = value[3] * (14 + value[2]) + 2 * value[0] + ((value[0] - 1) * 2) + sum(C) + value[1] * 16 + 16
         cursor.close()
         Ci = [i[0] for i in enumerate(C)]
-        return render_template('html/result.html', IP=I, U=value[3], W=value[2], S=value[0], A=value[1], C=C, Ci=Ci, M=(value[0]-1)*2, )
+        print(Ci)
+        db = MySQLdb.connect(host="localhost", user="root", passwd="q1w2a3s4", db="calculateip")
+        cursor = db.cursor()
+        i = 1
+        for j in SU:
+            cursor.execute(''' INSERT INTO упс (Количество_УПС, Номер_станции) VALUES(%s,%s)''',(j, i))
+            i += 1
+        db.commit()
+        cursor.close()
+        return render_template('html/Result.html', IP=I, U=value[3], W=value[2], S=value[0], A=value[1], C=C, Ci=Ci, M=(value[0]-1)*2, P=value[0]-1 )
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0')
